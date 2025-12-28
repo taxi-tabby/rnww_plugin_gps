@@ -6,8 +6,8 @@
 import type {
     IBridge,
     IPlatform,
-    ICameraModule,
 } from '../types';
+import * as Camera from '../modules';
 
 /**
  * 카메라 브릿지 설정
@@ -24,12 +24,6 @@ export interface CameraBridgeConfig {
     platform: IPlatform;
 
     /**
-     * 카메라 모듈 인스턴스
-     * 이 패키지의 src/module/index.ts를 직접 전달
-     */
-    cameraModule: ICameraModule;
-
-    /**
      * 로거 (선택적)
      */
     logger?: {
@@ -44,7 +38,7 @@ export interface CameraBridgeConfig {
  * @param config 브릿지 설정
  */
 export const registerCameraHandlers = (config: CameraBridgeConfig) => {
-    const { bridge, platform, cameraModule: Camera, logger = console } = config;
+    const { bridge, platform, logger = console } = config;
 
     // Android와 iOS만 지원
     if (platform.OS !== 'android' && platform.OS !== 'ios') {
