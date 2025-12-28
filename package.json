@@ -21,7 +21,7 @@
   "license": "MIT",
   "files": [
     "lib/",
-    "src/module/",
+    "src/modules/",
     "README.md"
   ],
   "peerDependencies": {
