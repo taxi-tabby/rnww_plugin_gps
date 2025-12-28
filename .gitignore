@@ -1,5 +1,3 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
 # dependencies
 node_modules/
 
@@ -43,7 +41,7 @@ app-example
 /android
 
 # local module build artifacts
-src/**/android/build/
-src/**/android/.gradle/
-src/**/android/.cxx/
-src/**/*.iml
+src/module/**/android/build/
+src/module/**/android/.gradle/
+src/module/**/android/.cxx/
+src/module/**/*.iml
