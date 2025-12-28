@@ -1,0 +1,30 @@
+{
+  "name": "rnww-plugin-camera",
+  "version": "1.0.0",
+  "description": "React Native WebView Camera Plugin",
+  "main": "src/bridge/index.ts",
+  "types": "src/bridge/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "camera",
+    "webview",
+    "bridge"
+  ],
+  "author": "",
+  "license": "MIT",
+  "files": [
+    "src/",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "expo": "*",
+    "expo-modules-core": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

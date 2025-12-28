@@ -11,9 +11,3 @@ export type { CameraBridgeConfig } from './camera-bridge';
 
 // 타입 정의
 export * from '../types';
-
-// 어댑터
-export { ReactNativeBridgeAdapter, ReactNativePlatformAdapter } from '../adapters/react-native-bridge.adapter';
-
-// 카메라 모듈
-export * as CameraModule from '../modules';
