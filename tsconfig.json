@@ -16,8 +16,7 @@
     "allowSyntheticDefaultImports": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noImplicitAny": false,
-    "ignoreDeprecations": "6.0"
+    "noImplicitAny": false
   },
   "include": [
     "src/bridge/**/*",
