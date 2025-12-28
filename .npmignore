@@ -1,0 +1,25 @@
+# Source files
+src/bridge/
+src/types/
+
+# Build artifacts
+*.log
+*.tmp
+.DS_Store
+
+# Development
+.git/
+.gitignore
+tsconfig.json
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tests
+__tests__/
+*.test.ts
+*.spec.ts
