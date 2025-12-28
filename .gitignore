@@ -41,7 +41,7 @@ app-example
 /android
 
 # local module build artifacts
-src/module/**/android/build/
-src/module/**/android/.gradle/
-src/module/**/android/.cxx/
-src/module/**/*.iml
+src/modules/**/android/build/
+src/modules/**/android/.gradle/
+src/modules/**/android/.cxx/
+src/modules/**/*.iml

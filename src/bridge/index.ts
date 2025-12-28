@@ -16,4 +16,4 @@ export * from '../types';
 export { ReactNativeBridgeAdapter, ReactNativePlatformAdapter } from '../adapters/react-native-bridge.adapter';
 
 // 카메라 모듈
-export * as CameraModule from '../module';
+export * as CameraModule from '../modules';
