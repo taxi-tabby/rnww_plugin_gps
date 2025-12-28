@@ -1,6 +1,6 @@
 {
   "name": "rnww-plugin-camera",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "React Native WebView Camera Plugin with Expo support",
   "main": "lib/bridge/index.js",
   "types": "lib/bridge/index.d.ts",

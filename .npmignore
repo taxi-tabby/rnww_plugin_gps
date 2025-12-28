@@ -7,6 +7,22 @@ src/types/
 *.tmp
 .DS_Store
 
+# Android build outputs
+**/android/build/
+**/android/.gradle/
+**/android/local.properties
+**/android/.cxx/
+*.apk
+*.ap_
+*.aab
+
+# iOS build outputs
+**/ios/build/
+**/ios/Pods/
+**/ios/.xcode.env.local
+*.xcworkspace
+*.xcuserdata
+
 # Development
 .git/
 .gitignore
