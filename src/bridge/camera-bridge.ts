@@ -56,7 +56,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   let frameSubscription: any = null;
 
   // 카메라 권한 확인
-  bridge.registerHandler('checkCameraPermission', async (_payload, respond) => {
+  bridge.registerHandler('checkCameraPermission', async (_payload: any, respond: any) => {
     try {
       const result = await Camera.checkCameraPermission();
       respond({ success: true, ...result });
@@ -71,7 +71,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 카메라 권한 요청
-  bridge.registerHandler('requestCameraPermission', async (_payload, respond) => {
+  bridge.registerHandler('requestCameraPermission', async (_payload: any, respond: any) => {
     try {
       const result = await Camera.requestCameraPermission();
       respond({ success: true, ...result });
@@ -86,7 +86,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 사진 촬영
-  bridge.registerHandler('takePhoto', async (payload, respond) => {
+  bridge.registerHandler('takePhoto', async (payload: any, respond: any) => {
     try {
       const options = payload as { facing?: 'front' | 'back' };
       const facing = options?.facing || 'back';  // 기본값: 후면 카메라
@@ -102,7 +102,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 카메라 스트리밍 시작
-  bridge.registerHandler('startCamera', async (payload, respond) => {
+  bridge.registerHandler('startCamera', async (payload: any, respond: any) => {
     try {
       // 기존 리스너 정리 (중복 방지)
       if (frameSubscription) {
@@ -143,7 +143,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 카메라 중지
-  bridge.registerHandler('stopCamera', async (_payload, respond) => {
+  bridge.registerHandler('stopCamera', async (_payload: any, respond: any) => {
     try {
       const result = await Camera.stopCamera();
       
@@ -167,7 +167,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 카메라 상태 확인
-  bridge.registerHandler('getCameraStatus', async (_payload, respond) => {
+  bridge.registerHandler('getCameraStatus', async (_payload: any, respond: any) => {
     try {
       const status = await Camera.getCameraStatus();
       respond(status);
@@ -182,7 +182,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 크래시 로그 조회
-  bridge.registerHandler('getCrashLogs', async (_payload, respond) => {
+  bridge.registerHandler('getCrashLogs', async (_payload: any, respond: any) => {
     try {
       const result = await Camera.getCrashLogs();
       respond(result);
@@ -195,7 +195,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 크래시 로그 공유
-  bridge.registerHandler('shareCrashLog', async (payload, respond) => {
+  bridge.registerHandler('shareCrashLog', async (payload: any, respond: any) => {
     try {
       const { filePath } = payload as { filePath: string };
       if (!filePath) {
@@ -214,7 +214,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 크래시 로그 삭제
-  bridge.registerHandler('clearCrashLogs', async (_payload, respond) => {
+  bridge.registerHandler('clearCrashLogs', async (_payload: any, respond: any) => {
     try {
       const result = await Camera.clearCrashLogs();
       respond(result);
@@ -227,7 +227,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 디버그 로그 가져오기
-  bridge.registerHandler('getDebugLog', async (_payload, respond) => {
+  bridge.registerHandler('getDebugLog', async (_payload: any, respond: any) => {
     try {
       const result = await Camera.getDebugLog();
       respond(result);
@@ -240,7 +240,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 디버그 로그 공유하기
-  bridge.registerHandler('shareDebugLog', async (_payload, respond) => {
+  bridge.registerHandler('shareDebugLog', async (_payload: any, respond: any) => {
     try {
       const result = await Camera.shareDebugLog();
       respond(result);
@@ -253,7 +253,7 @@ export const registerCameraHandlers = (config: CameraBridgeConfig) => {
   });
 
   // 디버그 로그 삭제
-  bridge.registerHandler('clearDebugLog', async (_payload, respond) => {
+  bridge.registerHandler('clearDebugLog', async (_payload: any, respond: any) => {
     try {
       const result = await Camera.clearDebugLog();
       respond(result);

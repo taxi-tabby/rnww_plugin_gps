@@ -3,17 +3,8 @@
  */
 
 /**
- * 핸들러 응답 함수 타입
- */
-export type RespondFunction = (response: any) => void;
-
-/**
- * 브릿지 핸들러 함수 타입
- */
-export type BridgeHandler = (payload: any, respond: RespondFunction) => void | Promise<void>;
-
-/**
  * 브릿지 통신 인터페이스
+ * 기존 프로젝트와의 호환성을 위해 타입을 느슨하게 설정
  */
 export interface IBridge {
   /**
@@ -21,7 +12,7 @@ export interface IBridge {
    * @param eventName 이벤트 이름
    * @param handler 핸들러 함수
    */
-  registerHandler(eventName: string, handler: BridgeHandler): void;
+  registerHandler(eventName: string, handler: any): void;
 
   /**
    * 웹으로 메시지를 전송합니다
