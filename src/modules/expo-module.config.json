@@ -1,9 +1,9 @@
 {
   "platforms": ["android", "ios"],
   "android": {
-    "modules": ["expo.modules.customcamera.CameraModule"]
+    "modules": ["expo.modules.customgps.GpsModule"]
   },
   "ios": {
-    "modules": ["CameraModule"]
+    "modules": ["GpsModule"]
   }
 }

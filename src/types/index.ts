@@ -4,4 +4,4 @@
 
 export * from './platform';
 export * from './bridge';
-export * from './camera-module';
+export * from './gps-module';

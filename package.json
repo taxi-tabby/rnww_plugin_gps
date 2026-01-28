@@ -1,7 +1,7 @@
 {
-  "name": "rnww-plugin-camera",
-  "version": "1.1.0",
-  "description": "React Native WebView Camera Plugin with Expo support",
+  "name": "rnww-plugin-gps",
+  "version": "1.0.0",
+  "description": "React Native WebView GPS Plugin with Expo support",
   "main": "lib/bridge/index.js",
   "types": "lib/bridge/index.d.ts",
   "scripts": {
@@ -12,7 +12,9 @@
   "keywords": [
     "react-native",
     "expo",
-    "camera",
+    "gps",
+    "location",
+    "geolocation",
     "webview",
     "bridge",
     "expo-module"
