@@ -1,6 +1,6 @@
 {
   "name": "rnww-plugin-gps",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React Native WebView GPS Plugin with Expo support",
   "main": "lib/bridge/index.js",
   "types": "lib/bridge/index.d.ts",
