@@ -71,8 +71,8 @@ export async function requestLocationPermission(
   }
 
   const params = {
-    accuracy: request?.accuracy || 'fine',
-    background: request?.background || false,
+    accuracy: request?.accuracy === 'coarse' ? 'coarse' : 'fine',
+    background: request?.background === true,
   };
 
   return await module.requestLocationPermission(params);
@@ -91,11 +91,25 @@ export async function getCurrentLocation(
     return { success: false, error: 'GPS module not available' };
   }
 
+  const validAccuracies = ['high', 'balanced', 'low'] as const;
+  const validFields = ['altitude', 'speed', 'heading', 'accuracy', 'timestamp'] as const;
+
+  const accuracy = validAccuracies.includes(options?.accuracy as any)
+    ? options!.accuracy!
+    : 'balanced';
+
+  const rawTimeout = typeof options?.timeout === 'number' ? options.timeout : 10000;
+  const timeout = Math.max(1000, Math.min(rawTimeout, 60000));
+
+  const fields = Array.isArray(options?.fields)
+    ? options!.fields!.filter((f): f is typeof validFields[number] => validFields.includes(f as any))
+    : [];
+
   const params = {
-    accuracy: options?.accuracy || 'balanced',
-    timeout: options?.timeout || 10000,
+    accuracy,
+    timeout,
     useCachedLocation: options?.useCachedLocation ?? true,
-    fields: options?.fields || [],
+    fields,
   };
 
   return await module.getCurrentLocation(params);

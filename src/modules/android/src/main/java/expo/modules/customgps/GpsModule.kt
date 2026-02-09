@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
+import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -11,6 +12,7 @@ import com.google.android.gms.location.*
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import java.util.concurrent.atomic.AtomicBoolean
 
 class GpsModule : Module() {
     private var fusedLocationClient: FusedLocationProviderClient? = null
@@ -157,8 +159,8 @@ class GpsModule : Module() {
 
                 // 위치 서비스 확인
                 val locationManager = context.getSystemService(android.content.Context.LOCATION_SERVICE) as? LocationManager
-                if (locationManager == null || !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
-                    !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                if (locationManager == null || (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
+                    !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER))) {
                     promise.resolve(mapOf("success" to false, "error" to "LOCATION_DISABLED"))
                     return@AsyncFunction
                 }
@@ -183,23 +185,37 @@ class GpsModule : Module() {
                 }
 
                 // 캐시된 위치 먼저 시도
+                val hasResponded = AtomicBoolean(false)
+
                 if (useCachedLocation) {
                     try {
                         client.lastLocation.addOnSuccessListener { location ->
+                            if (hasResponded.get()) return@addOnSuccessListener
                             if (location != null) {
-                                promise.resolve(createLocationResult(location, fields, true))
+                                // 캐시 위치 staleness 체크 (5분 이상이면 무시)
+                                val ageMs = System.currentTimeMillis() - location.time
+                                if (ageMs <= 5 * 60 * 1000) {
+                                    if (hasResponded.compareAndSet(false, true)) {
+                                        promise.resolve(createLocationResult(location, fields, true))
+                                    }
+                                } else {
+                                    // 캐시가 너무 오래됨 → 새 위치 요청
+                                    requestNewLocation(client, priority, timeout, fields, promise, hasResponded)
+                                }
                             } else {
                                 // 캐시 없으면 새 위치 요청
-                                requestNewLocation(client, priority, timeout, fields, promise)
+                                requestNewLocation(client, priority, timeout, fields, promise, hasResponded)
                             }
                         }.addOnFailureListener {
-                            requestNewLocation(client, priority, timeout, fields, promise)
+                            requestNewLocation(client, priority, timeout, fields, promise, hasResponded)
                         }
                     } catch (e: SecurityException) {
-                        promise.resolve(mapOf("success" to false, "error" to "PERMISSION_DENIED"))
+                        if (hasResponded.compareAndSet(false, true)) {
+                            promise.resolve(mapOf("success" to false, "error" to "PERMISSION_DENIED"))
+                        }
                     }
                 } else {
-                    requestNewLocation(client, priority, timeout, fields, promise)
+                    requestNewLocation(client, priority, timeout, fields, promise, hasResponded)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "getCurrentLocation error", e)
@@ -298,26 +314,40 @@ class GpsModule : Module() {
         priority: Int,
         timeout: Long,
         fields: List<String>,
-        promise: Promise
+        promise: Promise,
+        hasResponded: AtomicBoolean
     ) {
         try {
             val locationRequest = LocationRequest.Builder(priority, timeout)
                 .setWaitForAccurateLocation(false)
                 .setMinUpdateIntervalMillis(timeout / 2)
                 .setMaxUpdates(1)
+                .setDurationMillis(timeout)
                 .build()
+
+            val mainHandler = Handler(Looper.getMainLooper())
 
             val locationCallback = object : LocationCallback() {
                 override fun onLocationResult(result: LocationResult) {
                     client.removeLocationUpdates(this)
-                    val location = result.lastLocation
-                    if (location != null) {
-                        promise.resolve(createLocationResult(location, fields, false))
-                    } else {
-                        promise.resolve(mapOf("success" to false, "error" to "TIMEOUT"))
+                    if (hasResponded.compareAndSet(false, true)) {
+                        val location = result.lastLocation
+                        if (location != null) {
+                            promise.resolve(createLocationResult(location, fields, false))
+                        } else {
+                            promise.resolve(mapOf("success" to false, "error" to "UNAVAILABLE"))
+                        }
                     }
                 }
             }
+
+            // 타임아웃 핸들러
+            mainHandler.postDelayed({
+                if (hasResponded.compareAndSet(false, true)) {
+                    client.removeLocationUpdates(locationCallback)
+                    promise.resolve(mapOf("success" to false, "error" to "TIMEOUT"))
+                }
+            }, timeout)
 
             client.requestLocationUpdates(
                 locationRequest,
@@ -325,10 +355,14 @@ class GpsModule : Module() {
                 Looper.getMainLooper()
             )
         } catch (e: SecurityException) {
-            promise.resolve(mapOf("success" to false, "error" to "PERMISSION_DENIED"))
+            if (hasResponded.compareAndSet(false, true)) {
+                promise.resolve(mapOf("success" to false, "error" to "PERMISSION_DENIED"))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "requestNewLocation error", e)
-            promise.resolve(mapOf("success" to false, "error" to "UNKNOWN"))
+            if (hasResponded.compareAndSet(false, true)) {
+                promise.resolve(mapOf("success" to false, "error" to "UNKNOWN"))
+            }
         }
     }
 }

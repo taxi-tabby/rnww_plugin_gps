@@ -73,10 +73,10 @@ interface LocationPermissionStatus {
 }
 
 interface LocationOptions {
-  accuracy?: 'high' | 'balanced' | 'low';
-  timeout?: number;
-  useCachedLocation?: boolean;
-  fields?: Array<'altitude' | 'speed' | 'heading' | 'accuracy' | 'timestamp'>;
+  accuracy?: 'high' | 'balanced' | 'low';   // whitelist validated, default: 'balanced'
+  timeout?: number;                          // clamped to 1000~60000ms, default: 10000
+  useCachedLocation?: boolean;               // default: true, only uses cache ≤5min old
+  fields?: Array<'altitude' | 'speed' | 'heading' | 'accuracy' | 'timestamp'>; // filtered
 }
 
 interface LocationResult {
@@ -89,6 +89,15 @@ interface LocationResult {
   accuracy?: number;
   timestamp?: number;
   isCached?: boolean;
-  error?: string;
+  error?: string;  // 'PERMISSION_DENIED' | 'LOCATION_DISABLED' | 'TIMEOUT' | 'UNAVAILABLE' | 'UNKNOWN'
 }
 ```
+
+## Behavior Notes
+
+- **Cached location staleness**: Both platforms reject cached locations older than 5 minutes, falling back to a fresh request
+- **Timeout**: Android uses `Handler.postDelayed` + `setDurationMillis`; iOS uses `Timer.scheduledTimer`. Both guarantee promise resolution
+- **Input validation**: Module wrapper validates accuracy (whitelist), timeout (type+range), fields (whitelist filter) before passing to native
+- **Concurrent requests (iOS)**: New `getCurrentLocation` calls cancel the previous delegate's timer via `cancel()` before replacing it
+- **Double-resolve guard**: Android uses `AtomicBoolean`; iOS uses `hasResponded` flag — prevents promise from resolving more than once
+- **Android requestLocationPermission**: Returns immediately with `status: "requesting"` — must call `checkLocationPermission` again for actual result

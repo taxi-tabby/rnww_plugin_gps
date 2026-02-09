@@ -3,7 +3,7 @@ import CoreLocation
 
 public class GpsModule: Module {
     private var locationManager: CLLocationManager?
-    private var locationDelegate: LocationDelegate?
+    private var locationDelegate: NSObject?
 
     public func definition() -> ModuleDefinition {
         Name("CustomGPS")
@@ -20,7 +20,11 @@ public class GpsModule: Module {
 
         // 권한 확인
         AsyncFunction("checkLocationPermission") { (promise: Promise) in
-            let status = CLLocationManager.authorizationStatus()
+            guard let manager = self.locationManager else {
+                promise.resolve(self.createUnavailableResponse())
+                return
+            }
+            let status = manager.authorizationStatus
             let result = self.createPermissionResponse(status: status)
             promise.resolve(result)
         }
@@ -33,15 +37,18 @@ public class GpsModule: Module {
             }
 
             let requestAccuracy = params["accuracy"] as? String ?? "fine"
-            let requestBackground = params["background"] as? Boolean ?? false
+            let requestBackground = params["background"] as? Bool ?? false
 
             // 이미 권한이 있는지 확인
-            let currentStatus = CLLocationManager.authorizationStatus()
+            let currentStatus = manager.authorizationStatus
             if currentStatus == .authorizedAlways || currentStatus == .authorizedWhenInUse {
                 let result = self.createPermissionResponse(status: currentStatus)
                 promise.resolve(result)
                 return
             }
+
+            // 이전 delegate 정리
+            self.cancelPendingDelegate(manager: manager)
 
             // 권한 요청을 위한 델리게이트 설정
             let delegate = PermissionDelegate { status in
@@ -66,7 +73,7 @@ public class GpsModule: Module {
             }
 
             // 권한 확인
-            let status = CLLocationManager.authorizationStatus()
+            let status = manager.authorizationStatus
             guard status == .authorizedAlways || status == .authorizedWhenInUse else {
                 promise.resolve(["success": false, "error": "PERMISSION_DENIED"])
                 return
@@ -94,15 +101,21 @@ public class GpsModule: Module {
                 manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
             }
 
-            // 캐시된 위치 먼저 시도
+            // 캐시된 위치 먼저 시도 (5분 이내인 경우만)
             if useCachedLocation, let cachedLocation = manager.location {
-                let result = self.createLocationResult(location: cachedLocation, fields: fields, isCached: true)
-                promise.resolve(result)
-                return
+                let ageSeconds = -cachedLocation.timestamp.timeIntervalSinceNow
+                if ageSeconds <= 5 * 60 {
+                    let result = self.createLocationResult(location: cachedLocation, fields: fields, isCached: true)
+                    promise.resolve(result)
+                    return
+                }
             }
 
+            // 이전 delegate 정리
+            self.cancelPendingDelegate(manager: manager)
+
             // 새 위치 요청
-            let delegate = LocationRequestDelegate(timeout: timeout, fields: fields) { result in
+            let delegate = LocationRequestDelegate(timeout: timeout, fields: fields, createResult: self.createLocationResult) { result in
                 promise.resolve(result)
             }
             self.locationDelegate = delegate
@@ -123,6 +136,14 @@ public class GpsModule: Module {
     }
 
     // MARK: - Private Methods
+
+    private func cancelPendingDelegate(manager: CLLocationManager) {
+        if let prevDelegate = self.locationDelegate as? LocationRequestDelegate {
+            prevDelegate.cancel()
+        }
+        manager.delegate = nil
+        self.locationDelegate = nil
+    }
 
     private func createPermissionResponse(status: CLAuthorizationStatus) -> [String: Any] {
         let granted: Bool
@@ -229,6 +250,7 @@ public class GpsModule: Module {
 
 private class PermissionDelegate: NSObject, CLLocationManagerDelegate {
     private let completion: (CLAuthorizationStatus) -> Void
+    private var hasResponded = false
 
     init(completion: @escaping (CLAuthorizationStatus) -> Void) {
         self.completion = completion
@@ -236,15 +258,17 @@ private class PermissionDelegate: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        let status = CLLocationManager.authorizationStatus()
-        if status != .notDetermined {
+        let status = manager.authorizationStatus
+        if status != .notDetermined && !hasResponded {
+            hasResponded = true
             completion(status)
         }
     }
 
     // iOS 13 이하 지원
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        if status != .notDetermined {
+        if status != .notDetermined && !hasResponded {
+            hasResponded = true
             completion(status)
         }
     }
@@ -255,12 +279,14 @@ private class PermissionDelegate: NSObject, CLLocationManagerDelegate {
 private class LocationRequestDelegate: NSObject, CLLocationManagerDelegate {
     private let completion: ([String: Any]) -> Void
     private let fields: [String]
+    private let createResult: (CLLocation, [String], Bool) -> [String: Any]
     private var timeoutTimer: Timer?
     private var hasResponded = false
 
-    init(timeout: TimeInterval, fields: [String], completion: @escaping ([String: Any]) -> Void) {
+    init(timeout: TimeInterval, fields: [String], createResult: @escaping (CLLocation, [String], Bool) -> [String: Any], completion: @escaping ([String: Any]) -> Void) {
         self.completion = completion
         self.fields = fields
+        self.createResult = createResult
         super.init()
 
         // 타임아웃 설정
@@ -271,34 +297,19 @@ private class LocationRequestDelegate: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    func cancel() {
+        guard !hasResponded else { return }
+        hasResponded = true
+        timeoutTimer?.invalidate()
+    }
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard !hasResponded, let location = locations.last else { return }
         hasResponded = true
         timeoutTimer?.invalidate()
+        manager.delegate = nil
 
-        var result: [String: Any] = [
-            "success": true,
-            "latitude": location.coordinate.latitude,
-            "longitude": location.coordinate.longitude,
-            "isCached": false
-        ]
-
-        if fields.contains("altitude") {
-            result["altitude"] = location.altitude
-        }
-        if fields.contains("speed") && location.speed >= 0 {
-            result["speed"] = location.speed
-        }
-        if fields.contains("heading") && location.course >= 0 {
-            result["heading"] = location.course
-        }
-        if fields.contains("accuracy") && location.horizontalAccuracy >= 0 {
-            result["accuracy"] = location.horizontalAccuracy
-        }
-        if fields.contains("timestamp") {
-            result["timestamp"] = Int64(location.timestamp.timeIntervalSince1970 * 1000)
-        }
-
+        let result = createResult(location, fields, false)
         completion(result)
     }
 
@@ -306,6 +317,7 @@ private class LocationRequestDelegate: NSObject, CLLocationManagerDelegate {
         guard !hasResponded else { return }
         hasResponded = true
         timeoutTimer?.invalidate()
+        manager.delegate = nil
 
         let errorCode: String
         if let clError = error as? CLError {

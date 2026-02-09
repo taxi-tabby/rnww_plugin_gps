@@ -76,10 +76,10 @@ interface LocationPermissionRequest {
 
 ```typescript
 interface LocationOptions {
-  accuracy?: 'high' | 'balanced' | 'low';  // 기본: 'balanced'
-  timeout?: number;                         // 밀리초, 기본: 10000
-  useCachedLocation?: boolean;              // 기본: true
-  fields?: Array<'altitude' | 'speed' | 'heading' | 'accuracy' | 'timestamp'>;
+  accuracy?: 'high' | 'balanced' | 'low';  // 기본: 'balanced', 화이트리스트 검증
+  timeout?: number;                         // 밀리초, 기본: 10000, 1000~60000 범위 제한
+  useCachedLocation?: boolean;              // 기본: true, 5분 이내 캐시만 유효
+  fields?: Array<'altitude' | 'speed' | 'heading' | 'accuracy' | 'timestamp'>;  // 유효 필드만 필터링
 }
 
 interface LocationResult {
@@ -157,14 +157,36 @@ Note: `ACCESS_BACKGROUND_LOCATION`은 Android 10(Q)+ 에서 필요하며, fine/c
 ## Flow: getCurrentLocation
 
 ```
-1. 권한 확인 → 없으면 PERMISSION_DENIED 반환
-2. 위치 서비스 확인 → 꺼져있으면 LOCATION_DISABLED 반환
-3. 위치 요청 시작 (accuracy 설정 적용)
-4. 타임아웃 내 성공 → 위치 데이터 반환
-5. 타임아웃 발생:
-   └─ useCachedLocation=true → 캐시 위치 반환 (isCached: true)
-   └─ 캐시 없음 → TIMEOUT 에러 반환
+1. 입력 검증 (Module Wrapper)
+   └─ accuracy 화이트리스트 검증 (잘못된 값 → 'balanced')
+   └─ timeout 타입 체크 + 범위 제한 (1000~60000ms)
+   └─ fields 유효 필드명 필터링
+2. 권한 확인 → 없으면 PERMISSION_DENIED 반환
+3. 위치 서비스 확인 → 꺼져있으면 LOCATION_DISABLED 반환
+4. useCachedLocation=true일 때:
+   └─ 캐시 위치 확인 (5분 이내 유효)
+   └─ 유효한 캐시 있음 → 즉시 반환 (isCached: true)
+   └─ 캐시 없거나 만료 → 5번으로
+5. 새 위치 요청 (accuracy 설정 적용, 타임아웃 설정)
+   └─ Android: Handler.postDelayed 타임아웃 + LocationRequest.setDurationMillis
+   └─ iOS: Timer.scheduledTimer 타임아웃
+6. 타임아웃 내 성공 → 위치 데이터 반환
+7. 타임아웃 발생 → TIMEOUT 에러 반환
 ```
+
+### 동시 요청 처리
+
+- 양 플랫폼 모두 `hasResponded` 가드로 promise 이중 resolve 방지
+  - Android: `AtomicBoolean` (스레드 안전)
+  - iOS: `hasResponded` 플래그 + delegate 교체 시 `cancel()` 호출
+- iOS에서 새 요청이 오면 이전 LocationRequestDelegate의 타이머를 취소하고 교체
+
+### 캐시 위치 Staleness
+
+- 캐시 위치 유효 기간: **5분 (300초)**
+- Android: `System.currentTimeMillis() - location.time`으로 판단
+- iOS: `-cachedLocation.timestamp.timeIntervalSinceNow`로 판단
+- 유효 기간 초과 시 캐시를 무시하고 새 위치 요청으로 fallback
 
 ## Migration Steps
 
